@@ -1,0 +1,38 @@
+<apex:page controller="SimpleGeoController">
+    <apex:includeScript value="{!$Resource.jquery}"/>
+    <h1>Geo-location</h1>
+    <script type="text/javascript">
+    $j = jQuery.noConflict();
+  
+    function positionHandler(p) {
+        SimpleGeoController.getAddress(p.latitude, p.longitude, function(result, event){
+            if (event.status) { 
+                var output = 'Your location is: ('+p.latitude+', '+p.longitude+
+                    '), <a href="http://maps.google.com/maps?q='+result+'">'+result+'</a>';
+                $j('#loc').html(output);
+            } else if (event.type === 'exception') {    
+                alert(event.message);
+            } else {
+                alert(event.message);
+            } 
+        });
+    }
+  
+    var defaultPosition = {!locationFromIP};
+  
+    if (window.navigator && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(p){
+            positionHandler(p.coords);
+            $j('#detail').html('(From Geolocation API)');
+        }, function(){
+            positionHandler(defaultPosition);
+            $j('#detail').html('(From IP address)');
+        });
+    } else {
+        positionHandler(defaultPosition);
+        $j('#detail').html('(From IP address)');
+    }
+    </script>
+    <p id="loc">Getting your location...</p>
+    <p id="detail"></p>
+</apex:page>
