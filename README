@@ -76,15 +76,6 @@ String url = '/0.1/records/my.layer.name/nearby/'+
     latitude+','+longitude+'.json?radius='+radius;
 String json = client.sendRequestRaw(url, null, null);
 
-Caveats
--------
-
-Due to the use of the Apex JSON parser (JSONObject.cls, see below), there is 
-a limit to the amount of response data that can be parsed from SimpleGeo. Many
-of the APIs include a 'limit' parameter - some experimentation may be required
-to maximize the amount of data available without breaching the script statement
-limit.
-
 Dependencies
 ------------
 
@@ -98,14 +89,7 @@ access to SimpleGeo from the OAuth Playground, go to the API Tester tab and
 try to GET http://api.simplegeo.com/1.0/context/ip.json - this should result
 in a JSON object containing geographic data relating to your IP address.
 
-This beta version of the Force.com Toolkit for SimpleGeo includes its own 
-JSONObject.cls, patched to work correctly with escaped quotes found in 
-SimpleGeo data. If you are already using the standard JSONObject.cls from the
-apex-library project, you should find that this version replaces it with no
-changes required to your code.
-
-This toolkit will be refactored to use native Apex JSON parsing as soon as it
-is available, after which it lose its beta status.
+This version of the Force.com Toolkit for SimpleGeo uses the native JSON implementation, available in the Winter '12 release.
 
 Please file issues in the GitHub project: 
 https://github.com/metadaddy-sfdc/Force.com-Toolkit-for-SimpleGeo
