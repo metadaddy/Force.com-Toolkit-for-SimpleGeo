@@ -13,7 +13,7 @@ SimpleGeo client = new SimpleGeo();
 // Get context for an address - this includes latitude, longitude, 
 // postal code, state etc
 SimpleGeo.Context context = 
-	client.getContextFromAddress('1 Market St, San Francisco, CA');
+    client.getContextFromAddress('1 Market St, San Francisco, CA');
 
 // Get context for a point (latitude, longitude)
 SimpleGeo.Context context = client.getContext(37.793755, -122.395584);
@@ -26,13 +26,13 @@ SimpleGeo.Context context = client.getContextFromIPAddress('8.8.8.8');
 
 // Print out some information from the context
 System.debug(LoggingLevel.ERROR,'lat '+context.query.latitude+
-	', lon '+context.query.longitude+', address '+context.query.address);
+    ', lon '+context.query.longitude+', address '+context.query.address);
 
 // These are SimpleGeo handles
 String california = 'SG_2MySaPILVQG3MoXrsVehyR_37.215297_-119.663837';
 String attpark = 'SG_4H2GqJDZrc0ZAjKGR8qM4D_37.778406_-122.389506';
 String belltower = 
-	'SG_5JkVsYK82eLj26eomFrI7S_37.795027_-122.421583@1291796505';
+    'SG_5JkVsYK82eLj26eomFrI7S_37.795027_-122.421583@1291796505';
 
 // Get details on a feature (identified by its handle)
 SimpleGeo.Feature feature = client.getFeature(attpark);
@@ -42,21 +42,21 @@ System.debug(LoggingLevel.ERROR, feature.properties.get('name').getString());
 
 // Get all the Starbucks within 0.5km of a point
 SimpleGeo.Feature[] features = client.getPlaces(37.793755, -122.395584, 
-	new Map<String, String>{'radius' => '0.5', 'q' => 'Starbucks'});
+    new Map<String, String>{'radius' => '0.5', 'q' => 'Starbucks'});
 
 // Get all the Starbucks within 0.5km of an address
 SimpleGeo.Feature[] features = 
-	client.getPlacesNearAddress('1 Market St, San Francisco, CA', 
-	new Map<String, String>{'radius' => '0.5', 'q' => 'Starbucks'});
+    client.getPlacesNearAddress('1 Market St, San Francisco, CA', 
+    new Map<String, String>{'radius' => '0.5', 'q' => 'Starbucks'});
 
 // Get all the Starbucks within 10km of an IP address
 SimpleGeo.Feature[] features = client.getPlacesNearIPAddress('8.8.8.8', 
-	new Map<String, String>{'radius' => '10', 'q' => 'Starbucks'});
+    new Map<String, String>{'radius' => '10', 'q' => 'Starbucks'});
 
 // Print the addresses of a list of features
 for ( SimpleGeo.Feature feature: features ) {
     System.debug(LoggingLevel.ERROR, 
-			feature.properties.get('address').getString());
+            feature.properties.get('address').getString());
 }
 
 // Put a record in a layer
@@ -98,14 +98,14 @@ public with sharing class SimpleGeo {
     public class SimpleGeoException extends Exception {}
     
     public virtual class Geometry {
-    	public String typ;
+        public String typ;
     }
     
     public virtual class Position {
         public Double x;
         public Double y;
         public Double z;
-        public Position() {        	
+        public Position() {         
         }
         public Position(Double lat, Double lon) {
             this.x = lon;
@@ -114,9 +114,9 @@ public with sharing class SimpleGeo {
     }
     
     public virtual class Point extends Geometry {
-    	public Point() {
-    		typ = 'Point';
-    	}
+        public Point() {
+            typ = 'Point';
+        }
         public Point(Double lat, Double lon) {
             typ = 'Point';
             coordinates = new Position(lat, lon);
@@ -178,9 +178,9 @@ public with sharing class SimpleGeo {
     }
     
     public virtual class Feature extends Record {
-    	public Feature() {
-    		typ = 'Feature';
-    	}
+        public Feature() {
+            typ = 'Feature';
+        }
         public Geometry geometry;
         public String id;
         public Map<String, PropertyValue> properties;
@@ -221,92 +221,136 @@ public with sharing class SimpleGeo {
     }
     
     public virtual class Layer {
-    	public String name;
+        public String name;
         public String title;
         public String description;
         public Boolean publik;
-        // created and updated should be Long, but Apex JSONObject doesn't support it yet
-        public Double created;
-        public Double updated;
+        public Long created;
+        public Long updated;
     }
     
-    public class LayersResult {
+    public virtual class LayersResult {
         public Layer[] layers;
         public String nextCursor;
-        
-        public LayersResult(Layer[] layers, String nextCursor) {
-        	this.layers = layers;
-        	this.nextCursor = nextCursor;
-        }
     }
     
     private class JsonPosition extends Position {
-        public JsonPosition(list<JSONObject.value> valueList) {
-            x = valueList[0].dnum;
-            y = valueList[1].dnum;
-            if (valueList.size() > 2) {
-                z = valueList[2].dnum;
+        public JsonPosition(Coordinates coordinates) {
+            x = coordinates.arr[0].value;
+            y = coordinates.arr[1].value;
+            if (coordinates.arr.size() > 2) {
+                z = coordinates.arr[2].value;
             }
         }
     }
     
     private class JsonLineString extends LineString {
-        public JsonLineString(list<JSONObject.value> valueList) {
-            Integer size = valueList.size();
-            coordinates = new JsonPosition[size];
+        public JsonLineString(Coordinates coordinates) {
+            Integer size = coordinates.arr.size();
+            this.coordinates = new JsonPosition[size];
             for (Integer i = 0; i < size; i++) {
-                coordinates[i] = new JsonPosition(valueList[i].values);
+                this.coordinates[i] = new JsonPosition(coordinates.arr[i]);
             }
-        }
+        }        
     }
     
     private class JsonPoint extends Point {
-        public JsonPoint(JSONObject jsonObj) {
-            coordinates = new JsonPosition(jsonObj.getValue('coordinates').values);
+        public JsonPoint(Coordinates coordinates) {
+            this.coordinates = new JsonPosition(coordinates);
         }
     }
     
     private class JsonPolygon extends Polygon {
-        public JsonPolygon(JSONObject jsonObj) {
-            Integer size = jsonObj.getValue('coordinates').values.size();
-            coordinates = new JsonLineString[size];
+        public JsonPolygon(Coordinates coordinates) {
+            Integer size = coordinates.arr.size();
+            this.coordinates = new JsonLineString[size];
             for (Integer i = 0; i < size; i++) {
-                coordinates[i] = new JsonLineString(jsonObj.getValue('coordinates').values[i].values);
+                this.coordinates[i] = new JsonLineString(coordinates.arr[i]);
             }
         }
     }
     
-    private static Geometry makeGeometry(JSONObject jsonObj) {
-        String str = jsonObj.getValue('type').str;
-        if (str.equalsIgnoreCase('Point')) {
-            return new JsonPoint(jsonObj);
-        } else if (str.equalsIgnoreCase('Polygon')) {
-            return new JsonPolygon(jsonObj);
-        } else {
-            throw new SimpleGeoException('Unsupported geometry type: '+str);
+    private class Coordinates {
+        public Double value;
+        public List<Coordinates> arr;
+        public Coordinates() {
+            arr = new List<Coordinates>();
+        }
+        public Coordinates(Double value) {
+            this.value = value;
         }
     }
     
-    private static Map<String, PropertyValue> makeProperties(JSONObject jsonObj) {
+    private static Coordinates makeCoordinates(JSONParser parser) {
+        Coordinates coordinates = new Coordinates();
+        
+        while (parser.nextToken() != null) {
+        	JSONToken curr = parser.getCurrentToken();
+            if ( curr == JSONToken.START_ARRAY ) {
+                coordinates.arr.add(makeCoordinates(parser));
+            } else if ( curr == JSONToken.VALUE_NUMBER_FLOAT ) {
+                coordinates.arr.add(new Coordinates(parser.getDoubleValue()));
+            } else if ( curr == JSONToken.END_ARRAY ) {
+                return coordinates;
+            } else {
+                throw new SimpleGeoException('Unexpected token '+curr+' in coordinates');
+            }
+        }
+        
+        throw new SimpleGeoException('Error reading coordinates (unbalanced brackets?)');
+    }
+    
+    private static Geometry makeGeometry(JSONParser parser) {
+        String typ;
+        Coordinates coordinates;
+        
+        // We don't know the order that type and coordinates will arrive in,
+        // and coordinates' structure depends on type, so read both in then
+        // create the Apex object
+        while (parser.nextToken() != JSONToken.END_OBJECT) {
+        	JSONToken curr = parser.getCurrentToken();
+        	String text = parser.getText();
+            if (curr == JSONToken.FIELD_NAME) {
+                if (text == 'type') {
+	                parser.nextToken();
+	                typ = parser.getText();
+	            } else if (text == 'coordinates') {
+	                parser.nextToken();
+	                coordinates = makeCoordinates(parser);
+	            }
+            } 
+        }
+        if (typ.equalsIgnoreCase('Point')) {
+            return new JsonPoint(coordinates);
+        } else if (typ.equalsIgnoreCase('Polygon')) {
+            return new JsonPolygon(coordinates);
+        } else {
+            throw new SimpleGeoException('Unsupported geometry type: '+typ);
+        }                
+    }
+    
+    private static Map<String, PropertyValue> makeProperties(JSONParser parser) {
         Map<String, PropertyValue> properties = new Map<String, PropertyValue>();
         
-        for ( String key: jsonObj.keys() ) {
-            if (key.equals('classifiers')) {
-                Integer size = jsonObj.getValue(key).values.size();
-                Classifier[] classifiers = new Classifier[size];
-                for (Integer i = 0; i < size; i++) {
-                    classifiers[i] =  new JsonClassifier(jsonObj.getValue(key).values[i].obj);
+        while (parser.nextToken() != JSONToken.END_OBJECT) {
+            if (parser.getCurrentToken() == JSONToken.FIELD_NAME) {
+                String key = parser.getText();
+                parser.nextToken();
+                if (key.equals('classifiers')) {
+                    Classifier[] classifiers = new List<Classifier>();
+                    while (parser.nextToken() != JSONToken.END_ARRAY) {
+                        classifiers.add(new JsonClassifier(parser));                        
+                    }
+                    properties.put(key, new PropertyValue(classifiers));
+                } else if (key.equals('tags')){
+                    String[] tags = new List<String>();
+                    while (parser.nextToken() != JSONToken.END_ARRAY) {
+                        tags.add(parser.getText());
+                    }
+                    properties.put(key, new PropertyValue(tags));
+                } else {
+                    properties.put(key, new PropertyValue(parser.getText()));
                 }
-                properties.put(key, new PropertyValue(classifiers));
-            } else if (key.equals('tags')){
-                Integer size = jsonObj.getValue(key).values.size();
-                String[] tags = new String[size];
-                for (Integer i = 0; i < size; i++) {
-                    tags[i] = jsonObj.getValue(key).values[i].str;
-                }
-                properties.put(key, new PropertyValue(tags));
-            } else {
-                properties.put(key, new PropertyValue(jsonObj.getValue(key).str));
             }
         }
         
@@ -314,145 +358,267 @@ public with sharing class SimpleGeo {
     }
     
     private class JsonFeature extends Feature {
-        public JsonFeature(JSONObject jsonObj) {
-            geometry = makeGeometry(jsonObj.getValue('geometry').obj);
-            typ = jsonObj.getValue('type').str;
-            id = (jsonObj.getValue('id') != null )
-                    ? jsonObj.getValue('id').str : null;
-            properties = makeProperties(jsonObj.getValue('properties').obj);
+        public JsonFeature(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME) {
+                    if (text == 'geometry') {
+	                    parser.nextToken();
+	                    geometry = makeGeometry(parser);
+	                } else if (text == 'type') {
+	                    parser.nextToken();
+	                    typ = parser.getText();
+	                } else if (text == 'id') {
+	                    parser.nextToken();
+	                    id = parser.getText();
+	                } else if (text == 'properties') {
+	                    parser.nextToken();
+	                    properties = makeProperties(parser);
+	                }
+                }
+            }
         }
     }
     
-    private static Feature[] makeFeatureList(JSONObject jsonObj) {
-        Integer size = ( jsonObj.getValue('features') != null ) 
-                ? jsonObj.getValue('features').values.size()
-                : 0;
-        Feature[] features = new Feature[size];
-        for (Integer i = 0; i < size; i++) {
-            features[i] =  new JsonFeature(jsonObj.getValue('features').values[i].obj);
-        }
+    private static Feature[] makeFeatureList(JSONParser parser) {
+        Feature[] features = new List<Feature>();
+        while (parser.nextToken() != JSONToken.END_ARRAY) {
+            features.add(new JsonFeature(parser));
+        }                  
         return features;
     }
     
-    private static Layer[] makeLayerList(JSONObject jsonObj) {
-        Integer size = ( jsonObj.getValue('layers') != null ) 
-                ? jsonObj.getValue('layers').values.size()
-                : 0;
-        Layer[] layers = new Layer[size];
-        for (Integer i = 0; i < size; i++) {
-            layers[i] =  new JsonLayer(jsonObj.getValue('layers').values[i].obj);
-        }
-        return layers;
-    }
-    
     private class JsonQuery extends Query {
-        public JsonQuery(JSONObject jsonObj) {
-            latitude = jsonObj.getValue('latitude').dnum;
-            longitude = jsonObj.getValue('longitude').dnum;
+        public JsonQuery(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME) {
+                    if (text == 'latitude') {
+	                    parser.nextToken();
+	                    latitude = parser.getDoubleValue();
+	                } else if (text == 'longitude') {
+	                    parser.nextToken();
+	                    longitude = parser.getDoubleValue();
+	                } else if (text == 'ip') {
+	                    parser.nextToken();
+	                    ip = parser.getText();
+	                }
+                }
+            }
         }
     }
     
     private class JsonClassifier extends Classifier {
-        public JsonClassifier(JSONObject jsonObj) {
-            category = jsonObj.getValue('category').str;
-            typ = (jsonObj.getValue('type') != null) 
-                    ? jsonObj.getValue('type').str : null;
-            subcategory = (jsonObj.getValue('subcategory') != null) 
-                    ? jsonObj.getValue('subcategory').str : null;
+        public JsonClassifier(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME) {
+                    if (text == 'category') {
+	                    parser.nextToken();
+	                    category = parser.getText();
+	                } else if (text == 'type') {
+	                    parser.nextToken();
+	                    typ = parser.getText();
+	                } else if (text == 'subcategory') {
+	                    parser.nextToken();
+	                    subcategory = parser.getText();
+	                }
+                }
+            }
         }
     }
     
     public class JsonContext extends Context {
-        public JsonContext(JSONObject jsonObj) {
-            if (jsonObj.getValue('code') != null) {
-                throw new SimpleGeoException('SimpleGeo error '
-                        +jsonObj.getValue('code').num+' '
-                        +jsonObj.getValue('message').str); 
+        public JsonContext(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME) {
+                    if (text == 'query') {
+	                    parser.nextToken();
+	                    query = new JsonQuery(parser);
+	                } else if (text == 'timestamp') {
+	                    parser.nextToken();
+	                    timestamp = parser.getDoubleValue();
+	                } else if (text == 'features') {
+	                    parser.nextToken();
+	                    features = new List<FeatureRef>();
+	                    while (parser.nextToken() != JSONToken.END_ARRAY) {
+	                        features.add(new JsonFeatureRef(parser));
+	                    }
+	                } else if (text == 'demographics') {
+	                    parser.nextToken();
+	                    demographics = new JsonDemographics(parser);
+	                } else if (text == 'address') {
+	                    parser.nextToken();
+	                    address = new JsonFeature(parser);
+	                } else {
+	                    System.debug(LoggingLevel.WARN, 'JsonContext consuming unrecognized property: '+text);
+	                    parser.nextToken();
+	                    Integer depth = 0;
+	                    do {
+	                    	JSONToken curr1 = parser.getCurrentToken();
+	                        if (curr1 == JSONToken.START_OBJECT || 
+	                            curr1 == JSONToken.START_ARRAY) {
+	                            depth++;
+	                        } else if (curr1 == JSONToken.END_OBJECT ||
+	                            curr1 == JSONToken.END_ARRAY) {
+	                            depth--;
+	                        }
+	                    } while (depth > 0 && parser.nextToken() != null);
+	                }
+                }
             }
-            query = new JsonQuery(jsonObj.getValue('query').obj);
-            timestamp = jsonObj.getValue('timestamp').dnum;
-            Integer size = jsonObj.getValue('features').values.size();
-            features = new FeatureRef[size];
-            for (Integer i = 0; i < size; i++) {
-                features[i] =  new JsonFeatureRef(jsonObj.getValue('features').values[i].obj);
-            }
-            demographics = (jsonObj.getValue('demographics') != null) 
-                ? new JsonDemographics(jsonObj.getValue('demographics').obj) : null;
-            address = (jsonObj.getValue('address') != null )
-                    ? new JsonFeature(jsonObj.getValue('address').obj) : null;
-        }
+        }       
     }
     
     private class JsonFeatureRef extends FeatureRef {       
-        public JsonFeatureRef(JSONObject jsonObj) {
-            handle = jsonObj.getValue('handle').str;
-            name = jsonObj.getValue('name').str;
-            license = jsonObj.getValue('license').str;
-            
-            Integer size = jsonObj.getValue('bounds').values.size();
-            bounds = new Double[size];
-            for (Integer i = 0; i < size; i++) {
-                bounds[i] =  jsonObj.getValue('bounds').values[i].dnum;
-            }
-            
-            abbr = jsonObj.getValue('abbr').str;
-            
-            size = jsonObj.getValue('classifiers').values.size();
-            classifiers = new Classifier[size];
-            for (Integer i = 0; i < size; i++) {
-                classifiers[i] =  new JsonClassifier(jsonObj.getValue('classifiers').values[i].obj);
+        public JsonFeatureRef(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	if (curr == JSONToken.FIELD_NAME) {
+		        	String text = parser.getText();
+	                if (text == 'handle') {
+	                    parser.nextToken();
+	                    handle = parser.getText();
+	                } else if (text == 'name') {
+	                    parser.nextToken();
+	                    name = parser.getText();
+	                } else if (text == 'license') {
+	                    parser.nextToken();
+	                    license = parser.getText();
+	                } else if (text == 'bounds') {
+	                    parser.nextToken();
+	                    bounds = new List<Double>();
+	                    while (parser.nextToken() != JSONToken.END_ARRAY) {
+	                        bounds.add(parser.getDoubleValue());
+	                    }
+	                } else if (text == 'abbr') {
+	                    parser.nextToken();
+	                    abbr = parser.getText();
+	                } else if (text == 'classifiers') {
+	                    parser.nextToken();
+	                    classifiers = new List<Classifier>();
+	                    while (parser.nextToken() != JSONToken.END_ARRAY) {
+	                        classifiers.add(new JsonClassifier(parser));
+	                    }
+	                } else {
+	                    System.debug(LoggingLevel.WARN, 'JsonFeatureRef consuming unrecognized property: '+text);
+	                    parser.nextToken();
+	                    Integer depth = 0;
+	                    do {
+				        	JSONToken curr1 = parser.getCurrentToken();
+	                        if (curr1 == JSONToken.START_OBJECT || 
+	                            curr1 == JSONToken.START_ARRAY) {
+	                            depth++;
+	                        } else if (curr1 == JSONToken.END_OBJECT ||
+	                            curr1 == JSONToken.END_ARRAY) {
+	                            depth--;
+	                        }
+	                    } while (depth > 0 && parser.nextToken() != null);
+	                }
+	        	}
             }
         }
     }
     
     private class JsonDemographics extends Demographics {
-        public JsonDemographics(JSONObject jsonObj) {
-            if (jsonObj.getValue('metro_score') != null) {
-                metro_score = jsonObj.getValue('metro_score').num;
+        public JsonDemographics(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME){
+                    if (text == 'metro_score') {
+	                    parser.nextToken();
+	                    metro_score = parser.getIntegerValue();
+	                } else {
+	                    System.debug(LoggingLevel.WARN, 'JsonDemographics consuming unrecognized property: '+text);
+	                    parser.nextToken();
+	                    Integer depth = 0;
+	                    do {
+				        	JSONToken curr1 = parser.getCurrentToken();
+	                        if (curr1 == JSONToken.START_OBJECT || 
+	                            curr1 == JSONToken.START_ARRAY) {
+	                            depth++;
+	                        } else if (curr1 == JSONToken.END_OBJECT ||
+	                            curr1 == JSONToken.END_ARRAY) {
+	                            depth--;
+	                        }
+	                    } while (depth > 0 && parser.nextToken() != null);
+	                }
+                }
             }
         }
     }
     
     private class JsonLayer extends Layer {
-        public JsonLayer(JSONObject jsonObj) {
-            if (jsonObj.getValue('name') != null) {
-                name = jsonObj.getValue('name').str;
-            }
-            if (jsonObj.getValue('title') != null) {
-                title = jsonObj.getValue('title').str;
-            }
-            if (jsonObj.getValue('name') != null) {
-                name = jsonObj.getValue('name').str;
-            }
-            if (jsonObj.getValue('publik') != null) {
-                publik = jsonObj.getValue('publik').bool;
-            }
-            if (jsonObj.getValue('created') != null) {
-                created = jsonObj.getValue('created').dnum;
-            }
-            if (jsonObj.getValue('updated') != null) {
-                updated = jsonObj.getValue('updated').dnum;
+        public JsonLayer(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME) {
+                    if (text == 'name') {
+	                    parser.nextToken();
+	                    name = parser.getText();
+	                } else if (text == 'public') {
+	                    parser.nextToken();
+	                    publik = parser.getBooleanValue();
+	                } else if (text == 'created') {
+	                    parser.nextToken();
+	                    created = parser.getLongValue();
+	                } else if (text == 'updated') {
+	                    parser.nextToken();
+	                    updated = parser.getLongValue();
+	                }
+                }
             }
         }
     }
     
-    private static Record makeRecord(JSONObject jsonObj) {
-    	Record record;
-    	
-        String typ = jsonObj.getValue('type').str;
-        if (typ == 'feature') {
-            record = new JsonFeature(jsonObj);
-            if(jsonObj.getValue('id') != null) {
-            	record.id = jsonObj.getValue('id').str;
-            }                
-        } else {
-        	throw new SimpleGeoException('Unsupported record type: '+typ);
-        }
+    private class JsonLayersResult extends LayersResult {
+    	public JsonLayersResult(JSONParser parser) {
+            while (parser.nextToken() != JSONToken.END_OBJECT) {
+	        	JSONToken curr = parser.getCurrentToken();
+	        	String text = parser.getText();
+                if (curr == JSONToken.FIELD_NAME) {
+                    if (text == 'layers') {
+	                	parser.nextToken();
+				        layers = new List<Layer>();
+				        while (parser.nextToken() != JSONToken.END_ARRAY) {
+				            layers.add(new JsonLayer(parser));
+				        }                  
+	                } else if (text == 'next_cursor') {
+	                	parser.nextToken();
+				        nextCursor = parser.getText();              
+	                }
+                }
+            }
+	    }
+    }
+    
+    private static Record makeRecord(JSONParser parser) {
+        Record record;
         
-    	return record;
+        while (parser.nextToken() != JSONToken.END_OBJECT) {
+            if ((parser.getCurrentToken() == JSONToken.FIELD_NAME) &&
+                (parser.getText() == 'type')) {
+                parser.nextToken();
+                String str = parser.getText();
+                if (str.equalsIgnoreCase('feature')) {
+                    record = new JsonFeature(parser);
+                    throw new SimpleGeoException('Unsupported record type: '+str);
+                }                
+            }
+        }
+        throw new SimpleGeoException('Missing record type');
+        
+        return record;
     }
     
-    public String sendRequestRaw(String url, String method, String body) {
+    public String sendRequest(String url, String method, String body) {
         HttpRequest req = new HttpRequest();
         req.setMethod((method != null) ? method : 'GET');
         req.setEndpoint(api+url);
@@ -460,7 +626,7 @@ public with sharing class SimpleGeo {
             System.debug('Sending body '+body);
             req.setBody(body);
         }
-        
+
         OAuth oa = new OAuth();
         if(!oa.setService(simpleGeoService)) {
             System.debug(oa.message);
@@ -480,12 +646,8 @@ public with sharing class SimpleGeo {
         return rbody;
     }
     
-    private JSONObject sendRequest(String url, String method, String body) {
-        return new JSONObject(sendRequestRaw(url, method, body));
-    }
-    
-    private JSONObject sendRequest(String url) {
-    	return sendRequest(url, null, null);
+    private String sendRequest(String url) {
+        return sendRequest(url, null, null);
     }
     
     public Feature getFeature(String handle) {
@@ -493,7 +655,7 @@ public with sharing class SimpleGeo {
 
         String url = '/1.0/features/'+handle+'.json';
 
-        return new JsonFeature(sendRequest(url));
+        return new JsonFeature(JSON.createParser(sendRequest(url)));
     }
     
     public Context getContext(Double latitude, Double longitude) {
@@ -501,7 +663,7 @@ public with sharing class SimpleGeo {
 
         String url = '/1.0/context/'+latitude+','+longitude+'.json';
 
-        return new JsonContext(sendRequest(url));
+        return new JsonContext(JSON.createParser(sendRequest(url)));
     }
 
     public Context getContext(Decimal latitude, Decimal longitude) {
@@ -514,7 +676,7 @@ public with sharing class SimpleGeo {
 
         String url = '/1.0/context/address.json?address="'+EncodingUtil.urlEncode(address,'UTF-8')+'"';
 
-        return new JsonContext(sendRequest(url));
+        return new JsonContext(JSON.createParser(sendRequest(url)));
     }
     
     public Context getContextFromIPAddress(String ip) {
@@ -522,7 +684,8 @@ public with sharing class SimpleGeo {
 
         String url = '/1.0/context/'+ip+'.json';
 
-        return new JsonContext(sendRequest(url));
+        //return new JsonContext(sendRequest(url));
+        return new JsonContext(JSON.createParser(sendRequest(url)));
     }
     
     public Context getContextFromIPAddress() {
@@ -543,7 +706,7 @@ public with sharing class SimpleGeo {
             }
         }
 
-        return makeFeatureList(sendRequest(url));
+        return makeFeatureList(JSON.createParser(sendRequest(url)));
     }
     
     public Feature[] getPlaces(Double latitude, Double longitude) {
@@ -569,7 +732,7 @@ public with sharing class SimpleGeo {
             }
         }
 
-        return makeFeatureList(sendRequest(url));       
+        return makeFeatureList(JSON.createParser(sendRequest(url)));       
     }
     
     public Feature[] getPlacesNearAddress(String address) {
@@ -590,7 +753,7 @@ public with sharing class SimpleGeo {
             }
         }
 
-        return makeFeatureList(sendRequest(url));       
+        return makeFeatureList(JSON.createParser(sendRequest(url)));       
     }
     
     public Feature[] getPlacesNearIPAddress(Map<String,String> arguments) {
@@ -611,52 +774,30 @@ public with sharing class SimpleGeo {
         String url = '/0.1/layers.json';
         String sep = '?';
         if ( lim > 0 ) {
-        	url += '?limit='+lim;
-        	sep = '&';
+            url += '?limit='+lim;
+            sep = '&';
         }
         if ( cursor != null ) {
             url += sep+'cursor='+cursor;
         }
         
-        JSONObject obj = sendRequest(url);
-        
-        LayersResult result = new LayersResult(makeLayerList(obj), 
-            (obj.getValue('next_cursor') != null) ? obj.getValue('next_cursor').str : null);
-
-        return result;           	
+        return new JsonLayersResult(JSON.createParser(sendRequest(url)));              
     }
     
     public LayersResult getlayers(Integer lim) {
-    	return getLayers(lim, null);
+        return getLayers(lim, null);
     }
 
     public LayersResult getlayers() {
-    	return getLayers(0, null);
+        return getLayers(0, null);
     }
     
     public void putLayer(Layer layer) {
-    	System.debug('putLayers('+layer.toString()+')');
+        System.debug('putLayers('+layer.toString()+')');
         
         String url = '/0.1/layers/'+layer.name+'.json';
-        
-        JSONObject obj = new JSONObject();
-        if ( layer.title != null ) {
-            obj.putOpt('title', new JSONObject.value(layer.title));
-        }
-        if ( layer.description != null ) {
-            obj.putOpt('description', new JSONObject.value(layer.description));
-        }
-        if ( layer.publik != null ) {
-	        obj.putOpt('public', new JSONObject.value(layer.publik));
-        }        
-        if ( layer.created != null ) {
-            obj.putOpt('created', new JSONObject.value(layer.created));
-        }
-        if ( layer.updated != null ) {
-            obj.putOpt('updated', new JSONObject.value(layer.updated));
-        }
-    	
-    	sendRequest(url, 'PUT', obj.valueToString());
+
+        sendRequest(url, 'PUT', JSON.serialize(layer));
     }
     
     public Record getRecord(String layer, String id) {
@@ -664,48 +805,44 @@ public with sharing class SimpleGeo {
 
         String url = '/0.1/records/'+layer+'/'+id+'.json';
 
-        return makeRecord(sendRequest(url));
+        return makeRecord(JSON.createParser(sendRequest(url)));
     }
-    
-    JSONObject putGeometry(Geometry geometry) {
-        JSONObject obj = new JSONObject();
-        
+
+    void putGeometry(Geometry geometry, JSONGenerator gen) {
+    	gen.writeStartObject();
         if ( geometry.typ != null ) {
-            obj.putOpt('type', new JSONObject.value(geometry.typ));
+            gen.writeStringField('type', geometry.typ);
         }
-        List<JSONObject.Value> coordinates = new List<JSONObject.Value>();
+        gen.writeFieldName('coordinates');
         if (geometry.typ.equalsIgnoreCase('Point')) {
-        	Point p = (Point)geometry;
-        	coordinates.add(new JSONObject.Value(p.coordinates.x));
-            coordinates.add(new JSONObject.Value(p.coordinates.y));
+            Point p = (Point)geometry;
+            gen.writeStartArray();
+            gen.writeNumber(p.coordinates.x);
+            gen.writeNumber(p.coordinates.y);
+            gen.writeEndArray();
         } else if (geometry.typ.equalsIgnoreCase('Polygon')) {
             Polygon p = (Polygon)geometry;
+            gen.writeStartArray();
             for (Integer i = 0; i < p.coordinates.size(); i++) {
-            	List<JSONObject.Value> lineStrings = new List<JSONObject.Value>();
-            	for (Integer j = 0; j < p.coordinates[i].coordinates.size(); j++) {
-            		List<JSONObject.Value> points = new List<JSONObject.Value>();
-	                points.add(new JSONObject.Value(p.coordinates[i].coordinates[j].x));
-	                points.add(new JSONObject.Value(p.coordinates[i].coordinates[j].y));
-                    lineStrings.add(new JSONObject.Value(points));
-            	}
-            	coordinates.add(new JSONObject.Value(lineStrings));
+	            gen.writeStartArray();
+                for (Integer j = 0; j < p.coordinates[i].coordinates.size(); j++) {
+		            gen.writeNumber(p.coordinates[i].coordinates[j].x);
+		            gen.writeNumber(p.coordinates[i].coordinates[j].y);
+                }
+	            gen.writeEndArray();
             }
+            gen.writeEndArray();
         } else {
             throw new SimpleGeoException('Unsupported geometry type: '+geometry.typ);
         }
-        obj.putOpt('coordinates', new JSONObject.Value(coordinates));
-        
-        return obj;
     }
     
-    JSONObject putProperties(Map<String, PropertyValue> properties) {
-        JSONObject obj = new JSONObject();
-        
+    void putProperties(Map<String, PropertyValue> properties, JSONGenerator gen) {
+    	gen.writeStartObject();
         for (String key: properties.keySet()) {
-        	obj.putOpt(key, new JSONObject.Value(properties.get(key).getString()));
+            gen.writeStringField(key, properties.get(key).getString());
         }
-
-        return obj;
+    	gen.writeEndObject();
     }
     
     public void putRecord(String layer, String id, Record record) {
@@ -713,33 +850,36 @@ public with sharing class SimpleGeo {
         
         String url = '/0.1/records/'+layer+'/'+id+'.json';
         
-        JSONObject obj = new JSONObject();
-        obj.putOpt('type', new JSONObject.value(record.typ));
+        JSONGenerator gen = JSON.createGenerator(true);
+        gen.writeStartObject();
+        gen.writeStringField('type', record.typ);
         if ( record.typ == 'Feature' ) {
-        	Feature feature = (Feature)record;
-	        if ( feature.geometry != null ) {
-	            obj.putOpt('geometry', new JSONObject.Value(putGeometry(feature.geometry)));
-	        }
-	        if ( feature.properties != null ) {
-	            obj.putOpt('properties', new JSONObject.Value(putProperties(feature.properties)));
-	        }
+            Feature feature = (Feature)record;
+            if ( feature.geometry != null ) {
+            	gen.writeFieldName('geometry');
+                putGeometry(feature.geometry, gen);
+            }
+            if ( feature.properties != null ) {
+            	gen.writeFieldName('properties');
+                putProperties(feature.properties, gen);
+            }
         } else {
-        	throw new SimpleGeoException('Unsupported record type: '+record.typ);
+            throw new SimpleGeoException('Unsupported record type: '+record.typ);
         }
         
-        sendRequest(url, 'PUT', obj.valueToString());
+        sendRequest(url, 'PUT', gen.getAsString());
     }
     
     public Record[] getNearby(String layer, Decimal lat, Decimal lon, Decimal radius) {
-    	System.debug('getNearby('+layer+', '+lat+', '+lon+')');
-    	
-    	String url = '/0.1/records/'+layer+'/nearby/'+lat+','+lon+'.json';
-    	
-    	if ( radius > 0 ) {
-    		url += '?radius='+radius;
-    	}
-    	
-    	return makeFeatureList(sendRequest(url));
+        System.debug('getNearby('+layer+', '+lat+', '+lon+')');
+        
+        String url = '/0.1/records/'+layer+'/nearby/'+lat+','+lon+'.json';
+        
+        if ( radius > 0 ) {
+            url += '?radius='+radius;
+        }
+        
+        return makeFeatureList(JSON.createParser(sendRequest(url)));
     }
     
     public Record[] getNearby(String layer, Decimal lat, Decimal lon) {
